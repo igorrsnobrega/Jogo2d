@@ -50,11 +50,42 @@ export default class Player {
     if (input.keys.d) nx += move;
     if (this.canMove(nx, this.y)) this.x = nx;
     if (this.canMove(this.x, ny)) this.y = ny;
+    this.isMoving = input.keys.w || input.keys.a || input.keys.s || input.keys.d;
+    this.animTime = (this.animTime ?? 0) + (this.isMoving ? dt : 0);
   }
 
   render(ctx) {
     const styles = getComputedStyle(document.documentElement);
-    ctx.fillStyle = styles.getPropertyValue("--player");
-    ctx.fillRect(this.x, this.y, this.size, this.size);
+    const baseColor = styles.getPropertyValue("--player");
+    const skin = "#e1b58a";
+    const cloth = "#1f2d4a";
+    const leg = "#0f172a";
+    const w = this.size;
+    const h = this.size;
+    const headH = h * 0.35;
+    const bodyH = h * 0.4;
+    const legH = h * 0.25;
+    const legW = w * 0.22;
+    const swing = this.isMoving ? Math.sin((this.animTime ?? 0) * 12) * (w * 0.08) : 0;
+    const x = this.x;
+    const y = this.y;
+
+    // Head
+    ctx.fillStyle = skin;
+    ctx.fillRect(x + w * 0.25, y, w * 0.5, headH);
+    // Hair cap
+    ctx.fillStyle = "#3a2b1b";
+    ctx.fillRect(x + w * 0.22, y, w * 0.56, headH * 0.45);
+    // Body
+    ctx.fillStyle = cloth;
+    ctx.fillRect(x + w * 0.2, y + headH, w * 0.6, bodyH);
+    // Arms
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(x + w * 0.1, y + headH + bodyH * 0.2, w * 0.15, bodyH * 0.6);
+    ctx.fillRect(x + w * 0.75, y + headH + bodyH * 0.2, w * 0.15, bodyH * 0.6);
+    // Legs (swing)
+    ctx.fillStyle = leg;
+    ctx.fillRect(x + w * 0.28 + swing, y + headH + bodyH, legW, legH);
+    ctx.fillRect(x + w * 0.52 - swing, y + headH + bodyH, legW, legH);
   }
 }

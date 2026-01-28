@@ -6,6 +6,7 @@ export default class Map {
     this.rows = rows;
     this.tileSize = tileSize;
     this.tiles = [];
+    this.decor = [];
     this.sandThickness = options.sandThickness ?? 1;
     this.seed = options.seed ?? Math.floor(Math.random() * 1_000_000);
     this.water = new Water(this);
@@ -129,6 +130,23 @@ export default class Map {
         this.tiles[y][x] = distance[y][x] <= this.sandThickness ? "sand" : "grass";
       }
     }
+
+    this.generateDecor();
+  }
+
+  generateDecor() {
+    this.decor = [];
+    for (let y = 0; y < this.rows; y++) {
+      for (let x = 0; x < this.cols; x++) {
+        if (this.tiles[y][x] !== "grass") continue;
+        const n = this.noise(x * 1.3, y * 1.3);
+        if (n > 0.72) {
+          this.decor.push({ x, y, type: "flower" });
+        } else if (n < -0.75) {
+          this.decor.push({ x, y, type: "tuft" });
+        }
+      }
+    }
   }
 
   inBounds(tx, ty) {
@@ -160,6 +178,22 @@ export default class Map {
           this.tileSize,
           this.tileSize
         );
+      }
+    }
+
+    // Grass decorations
+    for (const deco of this.decor) {
+      const px = deco.x * this.tileSize;
+      const py = deco.y * this.tileSize;
+      if (deco.type === "flower") {
+        ctx.fillStyle = "#f2f2f2";
+        ctx.fillRect(px + this.tileSize * 0.4, py + this.tileSize * 0.35, this.tileSize * 0.08, this.tileSize * 0.08);
+        ctx.fillStyle = "#e85f86";
+        ctx.fillRect(px + this.tileSize * 0.48, py + this.tileSize * 0.42, this.tileSize * 0.08, this.tileSize * 0.08);
+      } else {
+        ctx.fillStyle = "#4aa35a";
+        ctx.fillRect(px + this.tileSize * 0.3, py + this.tileSize * 0.5, this.tileSize * 0.1, this.tileSize * 0.12);
+        ctx.fillRect(px + this.tileSize * 0.5, py + this.tileSize * 0.48, this.tileSize * 0.1, this.tileSize * 0.14);
       }
     }
   }

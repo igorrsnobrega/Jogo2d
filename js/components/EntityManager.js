@@ -68,20 +68,61 @@ export default class EntityManager {
     const styles = getComputedStyle(document.documentElement);
     const colors = {
       tree: styles.getPropertyValue("--tree"),
+      treeDark: styles.getPropertyValue("--tree-dark"),
+      treeLight: styles.getPropertyValue("--tree-light"),
+      trunk: styles.getPropertyValue("--trunk"),
+      trunkDark: styles.getPropertyValue("--trunk-dark"),
       stone: styles.getPropertyValue("--stone"),
       animal: styles.getPropertyValue("--animal"),
     };
     for (const tree of this.trees) {
+      const size = this.tileSize * 0.8;
+      const x = tree.x - this.tileSize * 0.1;
+      const y = tree.y - this.tileSize * 0.2;
+      // Shadow
+      ctx.fillStyle = "rgba(0,0,0,0.2)";
+      ctx.fillRect(x + size * 0.15, y + size * 0.75, size * 0.7, size * 0.18);
+      // Canopy base
+      ctx.fillStyle = colors.treeDark;
+      ctx.fillRect(x, y, size, size * 0.6);
+      // Canopy highlights
       ctx.fillStyle = colors.tree;
-      ctx.fillRect(tree.x, tree.y, this.tileSize * 0.5, this.tileSize * 0.5);
+      ctx.fillRect(x + size * 0.1, y + size * 0.1, size * 0.8, size * 0.45);
+      ctx.fillStyle = colors.treeLight;
+      ctx.fillRect(x + size * 0.2, y + size * 0.18, size * 0.25, size * 0.2);
+      ctx.fillRect(x + size * 0.55, y + size * 0.22, size * 0.2, size * 0.18);
+      // Trunk
+      ctx.fillStyle = colors.trunkDark;
+      ctx.fillRect(x + size * 0.42, y + size * 0.6, size * 0.16, size * 0.3);
+      ctx.fillStyle = colors.trunk;
+      ctx.fillRect(x + size * 0.44, y + size * 0.62, size * 0.12, size * 0.26);
     }
     for (const stone of this.stones) {
+      const size = this.tileSize * 0.5;
+      const x = stone.x;
+      const y = stone.y;
+      ctx.fillStyle = "rgba(0,0,0,0.2)";
+      ctx.fillRect(x + size * 0.1, y + size * 0.6, size * 0.8, size * 0.2);
+      ctx.fillStyle = "#6f6f6f";
+      ctx.fillRect(x, y + size * 0.1, size, size * 0.6);
       ctx.fillStyle = colors.stone;
-      ctx.fillRect(stone.x, stone.y, this.tileSize * 0.45, this.tileSize * 0.45);
+      ctx.fillRect(x + size * 0.1, y, size * 0.8, size * 0.55);
+      ctx.fillStyle = "#c9c9c9";
+      ctx.fillRect(x + size * 0.2, y + size * 0.15, size * 0.2, size * 0.15);
     }
     for (const animal of this.animals) {
+      const size = this.tileSize * 0.5;
+      const x = animal.x;
+      const y = animal.y;
+      ctx.fillStyle = "rgba(0,0,0,0.2)";
+      ctx.fillRect(x + size * 0.1, y + size * 0.6, size * 0.8, size * 0.2);
+      ctx.fillStyle = "#b45b8e";
+      ctx.fillRect(x, y + size * 0.1, size, size * 0.5);
       ctx.fillStyle = colors.animal;
-      ctx.fillRect(animal.x, animal.y, this.tileSize * 0.45, this.tileSize * 0.45);
+      ctx.fillRect(x + size * 0.05, y, size * 0.9, size * 0.5);
+      // Ear / head highlight
+      ctx.fillStyle = "#f5b3d0";
+      ctx.fillRect(x + size * 0.6, y - size * 0.05, size * 0.2, size * 0.2);
     }
   }
 }
