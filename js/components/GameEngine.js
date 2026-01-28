@@ -5,6 +5,8 @@ import Inventory from "./Inventory.js";
 import Health from "./Health.js";
 import Fish from "./resources/Fish.js";
 import HUD from "./HUD.js";
+import CraftingMenu from "./CraftingMenu.js";
+import InventoryMenu from "./InventoryMenu.js";
 
 export default class GameEngine {
   constructor(canvas, resources) {
@@ -22,6 +24,18 @@ export default class GameEngine {
     this.inventory = new Inventory(resources);
     this.health = new Health(100);
     this.hud = new HUD(resources);
+    this.recipes = this.buildRecipes();
+    this.craftingMenu = new CraftingMenu(
+      resources,
+      this.recipes,
+      this.handleCraft.bind(this),
+      this.getCraftState.bind(this)
+    );
+    this.inventoryMenu = new InventoryMenu(
+      resources,
+      this.handleConsume.bind(this),
+      this.getCraftState.bind(this)
+    );
     this.isFishing = false;
     this.fishTimer = 0;
     this.fishDelay = 1.5;
@@ -39,8 +53,10 @@ export default class GameEngine {
       if (["w", "a", "s", "d"].includes(key)) this.input.keys[key] = true;
       if (key === " ") this.handleCollect();
       if (key === "f") this.handleFishing();
-      if (key === "1") this.eat("meat");
-      if (key === "2") this.eat("fish");
+      if (key === "c") this.craftingMenu.toggle();
+      if (key === "i") this.inventoryMenu.toggle();
+      if (key === "b") this.placeCampfire();
+      if (key === "p") this.pickCampfire();
     });
     window.addEventListener("keyup", (e) => {
       const key = e.key.toLowerCase();
@@ -81,6 +97,7 @@ export default class GameEngine {
 
   update(dt) {
     this.player.update(this.input, dt);
+    this.entities.update(dt);
     this.health.update(dt);
     if (this.isFishing) {
       this.fishTimer += dt;
@@ -99,7 +116,9 @@ export default class GameEngine {
   }
 
   updateHUD() {
-    this.hud.update(this.health.percent(), this.inventory.items);
+    this.hud.update(this.health.percent());
+    this.craftingMenu.render(this.getCraftState());
+    this.inventoryMenu.render();
   }
 
   loop(now) {
@@ -109,5 +128,97 @@ export default class GameEngine {
     this.render();
     this.updateHUD();
     requestAnimationFrame(this.loop.bind(this));
+  }
+
+  getCraftState() {
+    return {
+      inventory: this.inventory,
+      nearCampfire: this.entities.isNearCampfire(this.player),
+    };
+  }
+
+  buildRecipes() {
+    return [
+      {
+        id: "axe",
+        label: "Machado",
+        output: { key: "axe", label: "Machado" },
+        actionText: "Criar",
+        match: (counts) => counts.wood === 1 && counts.stone === 1 && Object.keys(counts).length === 2,
+        canCraft: ({ inventory }, counts) =>
+          !inventory.hasTool("axe") && inventory.canAfford({ wood: 1, stone: 1 }) && this.matchCounts(counts, { wood: 1, stone: 1 }),
+        requirementText: (state) =>
+          state.inventory.hasTool("axe")
+            ? "Já possui"
+            : "Requer: 1 Madeira, 1 Pedra",
+        apply: ({ inventory }) => {
+          if (inventory.spend({ wood: 1, stone: 1 })) {
+            inventory.addTool("axe");
+          }
+        },
+      },
+      {
+        id: "campfire",
+        label: "Fogueira",
+        output: { key: "campfire", label: "Fogueira" },
+        actionText: "Construir",
+        match: (counts) => counts.wood === 3 && counts.stone === 3 && Object.keys(counts).length === 2,
+        canCraft: ({ inventory }, counts) =>
+          inventory.canAfford({ wood: 3, stone: 3 }) && this.matchCounts(counts, { wood: 3, stone: 3 }),
+        requirementText: () => "Requer: 3 Madeiras, 3 Pedras",
+        apply: ({ inventory }) => {
+          if (inventory.spend({ wood: 3, stone: 3 })) {
+            inventory.add("campfire", 1);
+          }
+        },
+      },
+      {
+        id: "cookMeat",
+        label: "Assar Carne",
+        output: { key: "cookedMeat", label: "Carne Cozida" },
+        actionText: "Cozinhar",
+        match: (counts) => counts.rawMeat === 1 && Object.keys(counts).length === 1,
+        canCraft: ({ inventory, nearCampfire }, counts) =>
+          nearCampfire && inventory.canAfford({ rawMeat: 1 }) && this.matchCounts(counts, { rawMeat: 1 }),
+        requirementText: (state) =>
+          state.nearCampfire
+            ? "Requer: 1 Carne Crua"
+            : "Precisa estar perto da fogueira",
+        apply: ({ inventory }) => {
+          if (inventory.spend({ rawMeat: 1 })) {
+            inventory.add("cookedMeat", 1);
+          }
+        },
+      },
+    ];
+  }
+
+  handleCraft(recipeId) {
+    const recipe = this.recipes.find((r) => r.id === recipeId);
+    if (!recipe) return;
+    recipe.apply(this.getCraftState());
+  }
+
+  handleConsume(resourceKey) {
+    this.eat(resourceKey);
+  }
+
+  matchCounts(counts, required) {
+    const keys = Object.keys(counts);
+    if (keys.length !== Object.keys(required).length) return false;
+    return keys.every((key) => counts[key] === required[key]);
+  }
+
+  placeCampfire() {
+    if (this.inventory.items.campfire <= 0) return;
+    if (this.entities.placeCampfire(this.player)) {
+      this.inventory.items.campfire -= 1;
+    }
+  }
+
+  pickCampfire() {
+    if (this.entities.pickCampfire(this.player)) {
+      this.inventory.add("campfire", 1);
+    }
   }
 }

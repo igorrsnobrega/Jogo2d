@@ -7,6 +7,7 @@ export default class Map {
     this.tileSize = tileSize;
     this.tiles = [];
     this.decor = [];
+    this.waterDecor = [];
     this.sandThickness = options.sandThickness ?? 1;
     this.seed = options.seed ?? Math.floor(Math.random() * 1_000_000);
     this.water = new Water(this);
@@ -132,6 +133,7 @@ export default class Map {
     }
 
     this.generateDecor();
+    this.generateWaterDecor();
   }
 
   generateDecor() {
@@ -144,6 +146,19 @@ export default class Map {
           this.decor.push({ x, y, type: "flower" });
         } else if (n < -0.75) {
           this.decor.push({ x, y, type: "tuft" });
+        }
+      }
+    }
+  }
+
+  generateWaterDecor() {
+    this.waterDecor = [];
+    for (let y = 1; y < this.rows - 1; y++) {
+      for (let x = 1; x < this.cols - 1; x++) {
+        if (this.tiles[y][x] !== "water") continue;
+        const n = this.noise(x * 1.7, y * 1.7);
+        if (n > 0.78) {
+          this.waterDecor.push({ x, y });
         }
       }
     }
@@ -165,6 +180,8 @@ export default class Map {
     const styles = getComputedStyle(document.documentElement);
     const water = styles.getPropertyValue("--water");
     const sand = styles.getPropertyValue("--sand");
+    const sandLight = styles.getPropertyValue("--sand-light");
+    const sandDark = styles.getPropertyValue("--sand-dark");
     const grass = styles.getPropertyValue("--grass");
     for (let y = 0; y < this.rows; y++) {
       for (let x = 0; x < this.cols; x++) {
@@ -178,6 +195,31 @@ export default class Map {
           this.tileSize,
           this.tileSize
         );
+      }
+    }
+
+    // Beach accents (light rim + dark grass edge)
+    for (let y = 0; y < this.rows; y++) {
+      for (let x = 0; x < this.cols; x++) {
+        const tile = this.tiles[y][x];
+        if (tile === "sand") {
+          const north = y > 0 ? this.tiles[y - 1][x] : "water";
+          const south = y < this.rows - 1 ? this.tiles[y + 1][x] : "water";
+          const west = x > 0 ? this.tiles[y][x - 1] : "water";
+          const east = x < this.cols - 1 ? this.tiles[y][x + 1] : "water";
+          const px = x * this.tileSize;
+          const py = y * this.tileSize;
+          ctx.fillStyle = sandLight;
+          if (north === "water") ctx.fillRect(px, py, this.tileSize, 2);
+          if (west === "water") ctx.fillRect(px, py, 2, this.tileSize);
+          if (south === "water") ctx.fillRect(px, py + this.tileSize - 2, this.tileSize, 2);
+          if (east === "water") ctx.fillRect(px + this.tileSize - 2, py, 2, this.tileSize);
+          ctx.fillStyle = sandDark;
+          if (north === "grass") ctx.fillRect(px, py, this.tileSize, 2);
+          if (west === "grass") ctx.fillRect(px, py, 2, this.tileSize);
+          if (south === "grass") ctx.fillRect(px, py + this.tileSize - 2, this.tileSize, 2);
+          if (east === "grass") ctx.fillRect(px + this.tileSize - 2, py, 2, this.tileSize);
+        }
       }
     }
 
@@ -195,6 +237,15 @@ export default class Map {
         ctx.fillRect(px + this.tileSize * 0.3, py + this.tileSize * 0.5, this.tileSize * 0.1, this.tileSize * 0.12);
         ctx.fillRect(px + this.tileSize * 0.5, py + this.tileSize * 0.48, this.tileSize * 0.1, this.tileSize * 0.14);
       }
+    }
+
+    // Water sparkles
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    for (const deco of this.waterDecor) {
+      const px = deco.x * this.tileSize;
+      const py = deco.y * this.tileSize;
+      ctx.fillRect(px + this.tileSize * 0.2, py + this.tileSize * 0.35, this.tileSize * 0.08, this.tileSize * 0.08);
+      ctx.fillRect(px + this.tileSize * 0.55, py + this.tileSize * 0.55, this.tileSize * 0.06, this.tileSize * 0.06);
     }
   }
 }

@@ -11,10 +11,29 @@
       <canvas id="game" width="800" height="600"></canvas>
       <div id="hud">
         <div id="life-bar"><span id="life-fill"></span></div>
-        <div id="inventory"></div>
+      </div>
+      <div id="inventory-menu" class="hidden">
+        <div class="crafting-header">Inventário</div>
+        <div class="inventory-grid" id="inventory-grid"></div>
+      </div>
+      <div id="crafting-menu" class="hidden">
+        <div class="crafting-header">Combinar Elementos</div>
+        <div class="crafting-section">
+          <div class="crafting-grid" id="crafting-grid"></div>
+          <div class="crafting-output">
+            <div class="crafting-arrow">→</div>
+            <div class="slot" id="crafting-result"></div>
+          </div>
+        </div>
+        <div class="crafting-actions">
+          <div id="crafting-requirements"></div>
+          <button id="crafting-button">Combinar</button>
+        </div>
+        <div class="crafting-subtitle">Inventário</div>
+        <div class="inventory-grid" id="crafting-inventory"></div>
       </div>
       <div id="footer">
-        WASD mover | Espaço coletar | F pescar | 1 comer carne | 2 comer peixe
+        WASD mover | Espaço coletar | F pescar | C combinar | I inventário | B colocar fogueira | P pegar fogueira
       </div>
     </div>
 

@@ -1,7 +1,7 @@
 import Resource from "./Resource.js";
 
 export default new Resource({
-  key: "meat",
-  label: "Carne",
+  key: "rawMeat",
+  label: "Carne Crua",
   colorVar: "--animal",
 });
