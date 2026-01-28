@@ -19,8 +19,8 @@ export default class GameEngine {
     const playerSize = this.tileSize * 0.6;
     const sandThickness = Math.min(2, Math.max(1, Math.round((playerSize * 2) / this.tileSize)));
     this.map = new Map(this.cols, this.rows, this.tileSize, { sandThickness });
-    this.player = new Player(this.map, this.tileSize);
     this.entities = new EntityManager(this.map, this.tileSize);
+    this.player = new Player(this.map, this.tileSize, this.entities);
     this.inventory = new Inventory(resources);
     this.health = new Health(100);
     this.hud = new HUD(resources);

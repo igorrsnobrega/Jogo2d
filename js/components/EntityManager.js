@@ -72,6 +72,65 @@ export default class EntityManager {
     this.time += dt;
   }
 
+  isBlockedRect(rect) {
+    const blocks = this.getBlockRects();
+    return blocks.some((b) => this.rectsOverlap(rect, b));
+  }
+
+  getBlockRects() {
+    const rects = [];
+    for (const tree of this.trees) {
+      const size = this.tileSize * 0.6;
+      rects.push({
+        x: tree.x,
+        y: tree.y,
+        w: size,
+        h: size,
+      });
+    }
+    for (const stone of this.stones) {
+      const size = this.tileSize * 0.5;
+      rects.push({
+        x: stone.x,
+        y: stone.y,
+        w: size,
+        h: size,
+      });
+    }
+    for (const animal of this.animals) {
+      const size = this.tileSize * 0.55;
+      rects.push({
+        x: animal.x - this.tileSize * 0.02,
+        y: animal.y,
+        w: size,
+        h: size * 0.6,
+      });
+    }
+    for (const fire of this.campfires) {
+      rects.push(this.getCampfireRect(fire));
+    }
+    return rects;
+  }
+
+  getCampfireRect(fire) {
+    const size = this.tileSize * 0.6;
+    return {
+      x: fire.x + size * 0.12,
+      y: fire.y + size * 0.42,
+      w: size * 0.36,
+      h: size * 0.2,
+    };
+  }
+
+  rectsOverlap(a, b) {
+    return (
+      a.x < b.x + b.w &&
+      a.x + a.w > b.x &&
+      a.y < b.y + b.h &&
+      a.y + a.h > b.y
+    );
+  }
+
   render(ctx) {
     const styles = getComputedStyle(document.documentElement);
     const colors = {
@@ -183,10 +242,18 @@ export default class EntityManager {
     if (this.getNearbyEntity(this.campfires, player, radius)) return false;
     const { tx, ty } = player.getTilePos();
     if (this.map.isWater(tx, ty) || this.map.isSand(tx, ty)) return false;
-    this.campfires.push({
+    const candidate = {
       x: tx * this.tileSize + 6,
       y: ty * this.tileSize + 6,
       phase: Math.random() * Math.PI * 2,
+    };
+    const campRect = this.getCampfireRect(candidate);
+    if (this.isBlockedRect(campRect)) return false;
+    if (this.rectsOverlap(player.getRect(), campRect)) return false;
+    this.campfires.push({
+      x: candidate.x,
+      y: candidate.y,
+      phase: candidate.phase,
     });
     return true;
   }

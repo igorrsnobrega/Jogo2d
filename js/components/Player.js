@@ -1,7 +1,8 @@
 export default class Player {
-  constructor(map, tileSize) {
+  constructor(map, tileSize, entities) {
     this.map = map;
     this.tileSize = tileSize;
+    this.entities = entities;
     this.size = tileSize * 0.6;
     this.x = tileSize * 9;
     this.y = tileSize * 9;
@@ -37,6 +38,7 @@ export default class Player {
       const ty = Math.floor(cy / this.tileSize);
       if (this.map.isWater(tx, ty)) return false;
     }
+    if (this.entities && this.entities.isBlockedRect(rect)) return false;
     return true;
   }
 
