@@ -56,7 +56,7 @@ export default class Player {
     this.animTime = (this.animTime ?? 0) + (this.isMoving ? dt : 0);
   }
 
-  render(ctx) {
+  render(ctx, state = {}) {
     const styles = getComputedStyle(document.documentElement);
     const baseColor = styles.getPropertyValue("--player");
     const skin = "#e1b58a";
@@ -89,5 +89,21 @@ export default class Player {
     ctx.fillStyle = leg;
     ctx.fillRect(x + w * 0.28 + swing, y + headH + bodyH, legW, legH);
     ctx.fillRect(x + w * 0.52 - swing, y + headH + bodyH, legW, legH);
+
+    if (state.isFishing) {
+      // Simple rod and line
+      const handX = x + w * 0.75;
+      const handY = y + headH + bodyH * 0.4;
+      ctx.fillStyle = "#c9a55f";
+      ctx.fillRect(handX, handY, w * 0.08, h * 0.35);
+      if (state.fishTarget) {
+        ctx.strokeStyle = "rgba(220,220,220,0.8)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(handX + w * 0.04, handY + h * 0.35);
+        ctx.lineTo(state.fishTarget.x, state.fishTarget.y);
+        ctx.stroke();
+      }
+    }
   }
 }

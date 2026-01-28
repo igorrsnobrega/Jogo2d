@@ -5,7 +5,8 @@ import RawMeat from "./components/resources/RawMeat.js";
 import Fish from "./components/resources/Fish.js";
 import CookedMeat from "./components/resources/CookedMeat.js";
 import CampfireItem from "./components/resources/CampfireItem.js";
+import FishingRod from "./components/resources/FishingRod.js";
 
 const canvas = document.getElementById("game");
-const resources = [Wood, Stone, RawMeat, CookedMeat, Fish, CampfireItem];
+const resources = [Wood, Stone, RawMeat, CookedMeat, Fish, CampfireItem, FishingRod];
 new GameEngine(canvas, resources);

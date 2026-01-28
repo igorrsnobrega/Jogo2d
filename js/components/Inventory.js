@@ -7,6 +7,7 @@ export default class Inventory {
     }
     this.tools = {
       axe: false,
+      fishingRod: false,
     };
   }
 

@@ -148,6 +148,7 @@ export default class CraftingMenu {
     const label = labelOverride || (resource ? resource.label : key);
     const fallbackColors = {
       axe: "#c9a55f",
+      fishingRod: "#c9a55f",
     };
     const colorVar = resource ? resource.colorVar : null;
     item.className = "item";

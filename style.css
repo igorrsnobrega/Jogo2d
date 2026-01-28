@@ -67,6 +67,12 @@ canvas {
   color: #f6d97a;
 }
 
+#hud-clock {
+  margin-left: auto;
+  font-size: 12px;
+  color: #d7e8ff;
+}
+
 #life-bar {
   flex: 1;
   height: 14px;

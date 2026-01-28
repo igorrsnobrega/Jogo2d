@@ -267,4 +267,12 @@ export default class EntityManager {
     const radius = this.tileSize * 1.2;
     return !!this.getNearbyEntity(this.campfires, player, radius);
   }
+
+  getCampfireLights() {
+    return this.campfires.map((fire) => ({
+      x: fire.x + this.tileSize * 0.35,
+      y: fire.y + this.tileSize * 0.35,
+      radius: this.tileSize * 2.2,
+    }));
+  }
 }
