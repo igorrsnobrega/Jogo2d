@@ -46,10 +46,14 @@ export default class GameEngine {
     this.dayTime = this.dayLength * 0.5;
     this.floatTexts = [];
     this.timeScale = 1;
+    this.zoom = 1;
+    this.minZoom = 0.7;
+    this.maxZoom = 1.6;
     this.input = {
       keys: { w: false, a: false, s: false, d: false },
     };
     this.lastTime = performance.now();
+    this.resizeCanvas();
     this.bindEvents();
     requestAnimationFrame(this.loop.bind(this));
   }
@@ -67,6 +71,8 @@ export default class GameEngine {
     const actionBtn = document.getElementById("action-button");
     if (actionBtn) actionBtn.addEventListener("click", () => this.handleAction());
     this.bindTimeControls();
+    this.bindZoomControls();
+    window.addEventListener("resize", () => this.resizeCanvas());
     window.addEventListener("keyup", (e) => {
       const key = e.key.toLowerCase();
       if (["w", "a", "s", "d"].includes(key)) this.input.keys[key] = false;
@@ -163,14 +169,25 @@ export default class GameEngine {
   }
 
   render() {
-    this.map.render(this.ctx);
-    this.entities.render(this.ctx);
-    this.player.render(this.ctx, {
+    const ctx = this.ctx;
+    ctx.save();
+    const { camX, camY, viewW, viewH } = this.getCameraOffset();
+    ctx.imageSmoothingEnabled = false;
+    ctx.scale(this.zoom, this.zoom);
+    ctx.translate(-camX, -camY);
+    // Fill extended ocean so zoom-out never shows empty area
+    const water = getComputedStyle(document.documentElement).getPropertyValue("--water");
+    ctx.fillStyle = water;
+    ctx.fillRect(camX - viewW, camY - viewH, viewW * 3, viewH * 3);
+    this.map.render(ctx);
+    this.entities.render(ctx);
+    this.player.render(ctx, {
       isFishing: this.isFishing,
       fishTarget: this.fishTarget,
     });
     this.renderLighting();
     this.renderFloatTexts();
+    ctx.restore();
   }
 
   updateHUD(dt) {
@@ -504,5 +521,48 @@ export default class GameEngine {
       });
     }
     setActive(this.timeScale);
+  }
+
+  bindZoomControls() {
+    this.canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const delta = -Math.sign(e.deltaY) * 0.1;
+      this.zoom = Math.min(this.maxZoom, Math.max(this.minZoom, this.zoom + delta));
+    });
+  }
+
+  getCameraOffset() {
+    const mapW = this.cols * this.tileSize;
+    const mapH = this.rows * this.tileSize;
+    const viewW = this.canvas.width / this.zoom;
+    const viewH = this.canvas.height / this.zoom;
+    const centerX = this.player.x + this.player.size / 2;
+    const centerY = this.player.y + this.player.size / 2;
+    let camX = centerX - viewW / 2;
+    let camY = centerY - viewH / 2;
+    if (mapW <= viewW) camX = (mapW - viewW) / 2;
+    else camX = Math.max(0, Math.min(mapW - viewW, camX));
+    if (mapH <= viewH) camY = (mapH - viewH) / 2;
+    else camY = Math.max(0, Math.min(mapH - viewH, camY));
+    return { camX, camY, viewW, viewH };
+  }
+
+  resizeCanvas() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    this.canvas.width = width;
+    this.canvas.height = height;
+    this.cols = Math.floor(width / this.tileSize);
+    this.rows = Math.floor(height / this.tileSize);
+    const playerSize = this.tileSize * 0.6;
+    const sandThickness = Math.min(2, Math.max(1, Math.round((playerSize * 2) / this.tileSize)));
+    this.map = new Map(this.cols, this.rows, this.tileSize, { sandThickness });
+    this.entities = new EntityManager(this.map, this.tileSize);
+    this.player.map = this.map;
+    this.player.entities = this.entities;
+    const mapW = this.cols * this.tileSize;
+    const mapH = this.rows * this.tileSize;
+    this.player.x = mapW / 2 - this.player.size / 2;
+    this.player.y = mapH / 2 - this.player.size / 2;
   }
 }
