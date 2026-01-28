@@ -39,6 +39,7 @@ export default class GameEngine {
     this.isFishing = false;
     this.fishTimer = 0;
     this.fishDelay = 1.5;
+    this.eatCooldown = 0;
     this.input = {
       keys: { w: false, a: false, s: false, d: false },
     };
@@ -56,8 +57,8 @@ export default class GameEngine {
       if (key === "c") this.craftingMenu.toggle();
       if (key === "i") this.inventoryMenu.toggle();
       if (key === "b") this.placeCampfire();
-      if (key === "p") this.pickCampfire();
     });
+    this.canvas.addEventListener("click", () => this.tryCookAtCampfire());
     window.addEventListener("keyup", (e) => {
       const key = e.key.toLowerCase();
       if (["w", "a", "s", "d"].includes(key)) this.input.keys[key] = false;
@@ -65,8 +66,11 @@ export default class GameEngine {
   }
 
   eat(resourceKey) {
+    if (this.eatCooldown > 0) return;
     if (this.inventory.consume(resourceKey)) {
       this.health.heal(20);
+      this.eatCooldown = 2.5;
+      this.hud.showMessage("Você comeu e recuperou vida!");
     }
   }
 
@@ -99,6 +103,7 @@ export default class GameEngine {
     this.player.update(this.input, dt);
     this.entities.update(dt);
     this.health.update(dt);
+    if (this.eatCooldown > 0) this.eatCooldown = Math.max(0, this.eatCooldown - dt);
     if (this.isFishing) {
       this.fishTimer += dt;
       if (this.fishTimer >= this.fishDelay) {
@@ -115,8 +120,8 @@ export default class GameEngine {
     this.player.render(this.ctx);
   }
 
-  updateHUD() {
-    this.hud.update(this.health.percent());
+  updateHUD(dt) {
+    this.hud.update(this.health.percent(), dt);
     this.craftingMenu.render(this.getCraftState());
     this.inventoryMenu.render();
   }
@@ -126,7 +131,7 @@ export default class GameEngine {
     this.lastTime = now;
     this.update(dt);
     this.render();
-    this.updateHUD();
+    this.updateHUD(dt);
     requestAnimationFrame(this.loop.bind(this));
   }
 
@@ -134,6 +139,7 @@ export default class GameEngine {
     return {
       inventory: this.inventory,
       nearCampfire: this.entities.isNearCampfire(this.player),
+      eatCooldown: this.eatCooldown,
     };
   }
 
@@ -199,6 +205,14 @@ export default class GameEngine {
     recipe.apply(this.getCraftState());
   }
 
+  tryCookAtCampfire() {
+    if (!this.entities.cookAtCampfire(this.player)) return;
+    if (this.inventory.spend({ rawMeat: 1 })) {
+      this.inventory.add("cookedMeat", 1);
+      this.hud.showMessage("Carne cozida na fogueira!");
+    }
+  }
+
   handleConsume(resourceKey) {
     this.eat(resourceKey);
   }
@@ -213,12 +227,6 @@ export default class GameEngine {
     if (this.inventory.items.campfire <= 0) return;
     if (this.entities.placeCampfire(this.player)) {
       this.inventory.items.campfire -= 1;
-    }
-  }
-
-  pickCampfire() {
-    if (this.entities.pickCampfire(this.player)) {
-      this.inventory.add("campfire", 1);
     }
   }
 }

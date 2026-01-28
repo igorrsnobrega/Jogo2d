@@ -191,16 +191,13 @@ export default class EntityManager {
     return true;
   }
 
-  pickCampfire(player) {
-    const radius = this.tileSize;
-    const camp = this.getNearbyEntity(this.campfires, player, radius);
-    if (!camp) return false;
-    this.campfires = this.campfires.filter((c) => c !== camp);
-    return true;
-  }
-
   isNearCampfire(player) {
     const radius = this.tileSize * 1.5;
+    return !!this.getNearbyEntity(this.campfires, player, radius);
+  }
+
+  cookAtCampfire(player) {
+    const radius = this.tileSize * 1.2;
     return !!this.getNearbyEntity(this.campfires, player, radius);
   }
 }

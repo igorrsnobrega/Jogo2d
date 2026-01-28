@@ -60,6 +60,13 @@ canvas {
   align-items: center;
 }
 
+#hud-message {
+  margin-left: 12px;
+  font-size: 12px;
+  opacity: 0.9;
+  color: #f6d97a;
+}
+
 #life-bar {
   flex: 1;
   height: 14px;
@@ -212,6 +219,28 @@ canvas {
   font-size: 10px;
   color: #111;
   font-weight: bold;
+}
+
+.item[title] {
+  cursor: help;
+}
+
+.item-tooltip {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 12, 15, 0.95);
+  border: 1px solid #3a4048;
+  padding: 4px 6px;
+  font-size: 10px;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.eat-cooldown {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .item-count {

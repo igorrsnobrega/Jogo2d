@@ -24,6 +24,7 @@ export default class InventoryMenu {
       item.className = "item";
       item.style.background = getComputedStyle(document.documentElement).getPropertyValue(res.colorVar);
       item.textContent = res.label.slice(0, 2).toUpperCase();
+      item.title = res.label;
       const countEl = document.createElement("div");
       countEl.className = "item-count";
       countEl.textContent = count;
@@ -34,6 +35,10 @@ export default class InventoryMenu {
       if (canEat) {
         const btn = document.createElement("button");
         btn.textContent = "Comer";
+        if (state.eatCooldown > 0) {
+          btn.classList.add("eat-cooldown");
+          btn.textContent = `Aguarde ${state.eatCooldown.toFixed(1)}s`;
+        }
         btn.style.marginTop = "4px";
         btn.addEventListener("click", () => this.onConsume(res.key));
         const wrapper = document.createElement("div");
