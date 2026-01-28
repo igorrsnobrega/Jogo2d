@@ -73,6 +73,35 @@ canvas {
   color: #d7e8ff;
 }
 
+#time-controls {
+  margin-left: 12px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#time-controls select {
+  background: #1b1f25;
+  color: #fff;
+  border: 1px solid #3a4048;
+  font-size: 11px;
+  padding: 2px 4px;
+}
+
+#time-controls button {
+  background: #2c6b4f;
+  border: none;
+  color: #fff;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+#time-controls button.active {
+  background: #3b6bdc;
+}
+
 #life-bar {
   flex: 1;
   height: 14px;

@@ -42,8 +42,10 @@ export default class GameEngine {
     this.fishTimer = 0;
     this.fishDelay = 1.5;
     this.eatCooldown = 0;
-    this.dayLength = 120;
+    this.dayLength = 600;
     this.dayTime = this.dayLength * 0.5;
+    this.floatTexts = [];
+    this.timeScale = 1;
     this.input = {
       keys: { w: false, a: false, s: false, d: false },
     };
@@ -64,6 +66,7 @@ export default class GameEngine {
     this.canvas.addEventListener("click", () => this.tryCookAtCampfire());
     const actionBtn = document.getElementById("action-button");
     if (actionBtn) actionBtn.addEventListener("click", () => this.handleAction());
+    this.bindTimeControls();
     window.addEventListener("keyup", (e) => {
       const key = e.key.toLowerCase();
       if (["w", "a", "s", "d"].includes(key)) this.input.keys[key] = false;
@@ -81,7 +84,11 @@ export default class GameEngine {
 
   handleCollect() {
     if (this.isFishing) return;
-    this.entities.collect(this.player, this.inventory);
+    const collected = this.entities.collect(this.player, this.inventory);
+    if (collected) {
+      const label = this.getResourceLabel(collected.key);
+      this.addFloatText(`+1 ${label}`, collected.x, collected.y);
+    }
   }
 
   playerInBeachZone() {
@@ -134,15 +141,21 @@ export default class GameEngine {
   }
 
   update(dt) {
-    this.player.update(this.input, dt);
-    this.entities.update(dt);
-    this.health.update(dt);
-    this.dayTime = (this.dayTime + dt) % this.dayLength;
-    if (this.eatCooldown > 0) this.eatCooldown = Math.max(0, this.eatCooldown - dt);
+    const scaled = dt * this.timeScale;
+    this.player.update(this.input, scaled);
+    this.entities.update(scaled);
+    this.health.update(scaled);
+    this.dayTime = (this.dayTime + scaled) % this.dayLength;
+    this.updateFloatTexts(scaled);
+    if (this.eatCooldown > 0) this.eatCooldown = Math.max(0, this.eatCooldown - scaled);
     if (this.isFishing) {
-      this.fishTimer += dt;
+      this.fishTimer += scaled;
       if (this.fishTimer >= this.fishDelay) {
         this.inventory.add(Fish.key, 1);
+        if (this.fishTarget) {
+          const label = this.getResourceLabel(Fish.key);
+          this.addFloatText(`+1 ${label}`, this.fishTarget.x, this.fishTarget.y);
+        }
         this.isFishing = false;
         console.log("Você pescou 1 peixe!");
       }
@@ -157,6 +170,7 @@ export default class GameEngine {
       fishTarget: this.fishTarget,
     });
     this.renderLighting();
+    this.renderFloatTexts();
   }
 
   updateHUD(dt) {
@@ -322,6 +336,39 @@ export default class GameEngine {
     }
   }
 
+  addFloatText(text, x, y) {
+    this.floatTexts.push({
+      text,
+      x,
+      y,
+      life: 1.2,
+    });
+  }
+
+  updateFloatTexts(dt) {
+    this.floatTexts = this.floatTexts
+      .map((t) => ({ ...t, y: t.y - dt * 12, life: t.life - dt }))
+      .filter((t) => t.life > 0);
+  }
+
+  renderFloatTexts() {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.font = "12px Trebuchet MS";
+    ctx.textAlign = "center";
+    for (const t of this.floatTexts) {
+      ctx.globalAlpha = Math.max(0, t.life);
+      ctx.fillStyle = "#f2f2f2";
+      ctx.fillText(t.text, t.x + this.tileSize * 0.25, t.y);
+    }
+    ctx.restore();
+  }
+
+  getResourceLabel(key) {
+    const res = this.resources.find((r) => r.key === key);
+    return res ? res.label : key;
+  }
+
   placeTent() {
     if (this.inventory.items.tent <= 0) return;
     if (this.entities.placeTent(this.player)) {
@@ -427,5 +474,35 @@ export default class GameEngine {
     const hh = String(Math.floor(minutes / 60)).padStart(2, "0");
     const mm = String(minutes % 60).padStart(2, "0");
     return `${hh}:${mm}`;
+  }
+
+  bindTimeControls() {
+    const container = document.getElementById("time-controls");
+    if (!container) return;
+    const buttons = Array.from(container.querySelectorAll("button"));
+    const daySelect = document.getElementById("day-length");
+    const setActive = (speed) => {
+      buttons.forEach((btn) => {
+        btn.classList.toggle("active", Number(btn.dataset.speed) === speed);
+      });
+    };
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const speed = Number(btn.dataset.speed);
+        if (!Number.isFinite(speed)) return;
+        this.timeScale = speed;
+        setActive(speed);
+      });
+    });
+    if (daySelect) {
+      daySelect.addEventListener("change", () => {
+        const value = Number(daySelect.value);
+        if (!Number.isFinite(value) || value <= 0) return;
+        const ratio = this.dayTime / this.dayLength;
+        this.dayLength = value;
+        this.dayTime = this.dayLength * ratio;
+      });
+    }
+    setActive(this.timeScale);
   }
 }

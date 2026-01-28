@@ -51,20 +51,20 @@ export default class EntityManager {
     if (tree) {
       this.trees = this.trees.filter((t) => t !== tree);
       inventory.add(Wood.key, 1);
-      return "tree";
+      return { key: Wood.key, x: tree.x, y: tree.y };
     }
     const stone = this.getNearbyEntity(this.stones, player, radius);
     if (stone) {
       this.stones = this.stones.filter((s) => s !== stone);
       inventory.add(Stone.key, 1);
-      return "stone";
+      return { key: Stone.key, x: stone.x, y: stone.y };
     }
     const animal = this.getNearbyEntity(this.animals, player, radius);
     if (animal) {
       if (!inventory.hasTool("axe")) return null;
       this.animals = this.animals.filter((a) => a !== animal);
       inventory.add(RawMeat.key, 1);
-      return "animal";
+      return { key: RawMeat.key, x: animal.x, y: animal.y };
     }
     return null;
   }

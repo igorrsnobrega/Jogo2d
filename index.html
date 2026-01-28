@@ -13,6 +13,19 @@
         <div id="life-bar"><span id="life-fill"></span></div>
         <div id="hud-message"></div>
         <div id="hud-clock"></div>
+        <div id="time-controls">
+          Tempo:
+          <button data-speed="0.5">0.5x</button>
+          <button data-speed="1">1x</button>
+          <button data-speed="2">2x</button>
+          <span class="day-length">
+            Dia: <select id="day-length">
+              <option value="300">5m</option>
+              <option value="600" selected>10m</option>
+              <option value="900">15m</option>
+            </select>
+          </span>
+        </div>
       </div>
       <div id="inventory-menu" class="hidden">
         <div class="crafting-header">Inventário</div>
