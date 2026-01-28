@@ -10,6 +10,7 @@ export default class EntityManager {
     this.stones = [];
     this.animals = [];
     this.campfires = [];
+    this.tents = [];
     this.time = 0;
     this.spawnEntities();
   }
@@ -109,6 +110,9 @@ export default class EntityManager {
     for (const fire of this.campfires) {
       rects.push(this.getCampfireRect(fire));
     }
+    for (const tent of this.tents) {
+      rects.push(this.getTentRect(tent));
+    }
     return rects;
   }
 
@@ -119,6 +123,16 @@ export default class EntityManager {
       y: fire.y + size * 0.42,
       w: size * 0.36,
       h: size * 0.2,
+    };
+  }
+
+  getTentRect(tent) {
+    const size = this.tileSize * 0.9;
+    return {
+      x: tent.x + size * 0.05,
+      y: tent.y + size * 0.45,
+      w: size * 0.8,
+      h: size * 0.35,
     };
   }
 
@@ -235,6 +249,18 @@ export default class EntityManager {
       ctx.fillStyle = "#d64545";
       ctx.fillRect(x + size * 0.24, y + size * 0.1 - flicker * 0.15, size * 0.12, size * 0.1 + flicker * 0.1);
     }
+
+    for (const tent of this.tents) {
+      const size = this.tileSize * 0.9;
+      const x = tent.x;
+      const y = tent.y;
+      ctx.fillStyle = "#1f2430";
+      ctx.fillRect(x, y + size * 0.5, size * 0.9, size * 0.3);
+      ctx.fillStyle = "#4a5b6b";
+      ctx.fillRect(x + size * 0.1, y + size * 0.2, size * 0.7, size * 0.35);
+      ctx.fillStyle = "#a4b2c5";
+      ctx.fillRect(x + size * 0.35, y + size * 0.25, size * 0.2, size * 0.2);
+    }
   }
 
   placeCampfire(player) {
@@ -255,6 +281,22 @@ export default class EntityManager {
       y: candidate.y,
       phase: candidate.phase,
     });
+    return true;
+  }
+
+  placeTent(player) {
+    const radius = this.tileSize;
+    if (this.getNearbyEntity(this.tents, player, radius)) return false;
+    const { tx, ty } = player.getTilePos();
+    if (this.map.isWater(tx, ty) || this.map.isSand(tx, ty)) return false;
+    const candidate = {
+      x: tx * this.tileSize + 2,
+      y: ty * this.tileSize + 2,
+    };
+    const tentRect = this.getTentRect(candidate);
+    if (this.isBlockedRect(tentRect)) return false;
+    if (this.rectsOverlap(player.getRect(), tentRect)) return false;
+    this.tents.push(candidate);
     return true;
   }
 

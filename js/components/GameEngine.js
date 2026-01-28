@@ -31,10 +31,12 @@ export default class GameEngine {
       this.handleCraft.bind(this),
       this.getCraftState.bind(this)
     );
+    this.selectedItem = null;
     this.inventoryMenu = new InventoryMenu(
       resources,
       this.handleConsume.bind(this),
-      this.getCraftState.bind(this)
+      this.getCraftState.bind(this),
+      this.handleSelectItem.bind(this)
     );
     this.isFishing = false;
     this.fishTimer = 0;
@@ -55,12 +57,13 @@ export default class GameEngine {
       const key = e.key.toLowerCase();
       if (["w", "a", "s", "d"].includes(key)) this.input.keys[key] = true;
       if (key === " ") this.handleCollect();
-      if (key === "f") this.handleFishing();
+      if (key === "e") this.handleAction();
       if (key === "c") this.craftingMenu.toggle();
       if (key === "i") this.inventoryMenu.toggle();
-      if (key === "b") this.placeCampfire();
     });
     this.canvas.addEventListener("click", () => this.tryCookAtCampfire());
+    const actionBtn = document.getElementById("action-button");
+    if (actionBtn) actionBtn.addEventListener("click", () => this.handleAction());
     window.addEventListener("keyup", (e) => {
       const key = e.key.toLowerCase();
       if (["w", "a", "s", "d"].includes(key)) this.input.keys[key] = false;
@@ -106,6 +109,30 @@ export default class GameEngine {
     console.log("Pescando... Aguarde.");
   }
 
+  handleAction() {
+    if (!this.selectedItem) {
+      this.hud.showMessage("Selecione um item no inventário.");
+      return;
+    }
+    if (this.selectedItem === "campfire") {
+      this.placeCampfire();
+      return;
+    }
+    if (this.selectedItem === "fishingRod") {
+      this.handleFishing();
+      return;
+    }
+    if (this.selectedItem === "cookedMeat" || this.selectedItem === "fish") {
+      this.eat(this.selectedItem);
+      return;
+    }
+    if (this.selectedItem === "tent") {
+      this.placeTent();
+      return;
+    }
+    this.hud.showMessage("Nenhuma ação disponível para este item.");
+  }
+
   update(dt) {
     this.player.update(this.input, dt);
     this.entities.update(dt);
@@ -135,7 +162,8 @@ export default class GameEngine {
   updateHUD(dt) {
     this.hud.update(this.health.percent(), dt, this.getClockText());
     this.craftingMenu.render(this.getCraftState());
-    this.inventoryMenu.render();
+    this.inventoryMenu.render(this.selectedItem);
+    this.updateActionLabel();
   }
 
   loop(now) {
@@ -172,6 +200,7 @@ export default class GameEngine {
         apply: ({ inventory }) => {
           if (inventory.spend({ wood: 1, stone: 1 })) {
             inventory.addTool("axe");
+            inventory.add("axe", 1);
           }
         },
       },
@@ -206,6 +235,21 @@ export default class GameEngine {
         apply: ({ inventory }) => {
           if (inventory.spend({ wood: 3, stone: 3 })) {
             inventory.add("campfire", 1);
+          }
+        },
+      },
+      {
+        id: "tent",
+        label: "Barraca",
+        output: { key: "tent", label: "Barraca" },
+        actionText: "Construir",
+        match: (counts) => counts.wood === 4 && counts.stone === 2 && Object.keys(counts).length === 2,
+        canCraft: ({ inventory }, counts) =>
+          inventory.canAfford({ wood: 4, stone: 2 }) && this.matchCounts(counts, { wood: 4, stone: 2 }),
+        requirementText: () => "Requer: 4 Madeiras, 2 Pedras",
+        apply: ({ inventory }) => {
+          if (inventory.spend({ wood: 4, stone: 2 })) {
+            inventory.add("tent", 1);
           }
         },
       },
@@ -276,6 +320,28 @@ export default class GameEngine {
     if (this.entities.placeCampfire(this.player)) {
       this.inventory.items.campfire -= 1;
     }
+  }
+
+  placeTent() {
+    if (this.inventory.items.tent <= 0) return;
+    if (this.entities.placeTent(this.player)) {
+      this.inventory.items.tent -= 1;
+    }
+  }
+
+  handleSelectItem(key) {
+    this.selectedItem = key === this.selectedItem ? null : key;
+  }
+
+  updateActionLabel() {
+    const el = document.getElementById("action-selected");
+    if (!el) return;
+    if (!this.selectedItem) {
+      el.textContent = "";
+      return;
+    }
+    const res = this.resources.find((r) => r.key === this.selectedItem);
+    el.textContent = res ? `Selecionado: ${res.label}` : "";
   }
 
   renderLighting() {

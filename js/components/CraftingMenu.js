@@ -149,14 +149,88 @@ export default class CraftingMenu {
     const fallbackColors = {
       axe: "#c9a55f",
       fishingRod: "#c9a55f",
+      tent: "#6fbf6a",
     };
     const colorVar = resource ? resource.colorVar : null;
     item.className = "item";
     item.style.background = colorVar
       ? getComputedStyle(document.documentElement).getPropertyValue(colorVar)
       : fallbackColors[key] || "#9b9b9b";
-    item.textContent = label.slice(0, 2).toUpperCase();
+    if (["axe", "tent", "fishingRod", "campfire", "wood", "stone", "rawMeat", "cookedMeat", "fish"].includes(key)) {
+      const canvas = this.buildIconCanvas(key);
+      item.appendChild(canvas);
+    } else {
+      item.textContent = label.slice(0, 2).toUpperCase();
+    }
     if (isOutput) item.title = label;
     return item;
+  }
+
+  buildIconCanvas(key) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 16;
+    canvas.height = 16;
+    const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    if (key === "axe") {
+      ctx.fillStyle = "#d8d8d8";
+      ctx.fillRect(9, 2, 3, 6);
+      ctx.fillStyle = "#a0a0a0";
+      ctx.fillRect(7, 3, 2, 4);
+      ctx.fillStyle = "#8b5a2b";
+      ctx.fillRect(4, 7, 3, 7);
+      ctx.fillRect(5, 6, 3, 2);
+    } else if (key === "tent") {
+      ctx.fillStyle = "#2f3742";
+      ctx.fillRect(2, 7, 12, 7);
+      ctx.fillStyle = "#4a5b6b";
+      ctx.fillRect(3, 4, 10, 5);
+      ctx.fillStyle = "#6b7c8d";
+      ctx.fillRect(6, 5, 4, 4);
+    } else if (key === "fishingRod") {
+      ctx.fillStyle = "#8b5a2b";
+      ctx.fillRect(7, 2, 2, 11);
+      ctx.fillStyle = "#d8d8d8";
+      ctx.fillRect(9, 3, 1, 7);
+    } else if (key === "campfire") {
+      ctx.fillStyle = "#7a4b2a";
+      ctx.fillRect(4, 9, 8, 3);
+      ctx.fillStyle = "#f2a03c";
+      ctx.fillRect(7, 4, 2, 4);
+      ctx.fillStyle = "#d64545";
+      ctx.fillRect(7, 3, 2, 2);
+    } else if (key === "wood") {
+      ctx.fillStyle = "#8b5a2b";
+      ctx.fillRect(3, 6, 10, 7);
+      ctx.fillStyle = "#a56b3a";
+      ctx.fillRect(4, 7, 8, 5);
+      ctx.fillStyle = "#5a3a1c";
+      ctx.fillRect(5, 8, 2, 2);
+    } else if (key === "stone") {
+      ctx.fillStyle = "#6f6f6f";
+      ctx.fillRect(3, 6, 10, 7);
+      ctx.fillStyle = "#9b9b9b";
+      ctx.fillRect(4, 5, 8, 6);
+      ctx.fillStyle = "#c9c9c9";
+      ctx.fillRect(6, 6, 2, 2);
+    } else if (key === "rawMeat") {
+      ctx.fillStyle = "#c94f6a";
+      ctx.fillRect(4, 6, 8, 6);
+      ctx.fillStyle = "#f1a0b0";
+      ctx.fillRect(6, 7, 3, 3);
+    } else if (key === "cookedMeat") {
+      ctx.fillStyle = "#8b3b2c";
+      ctx.fillRect(4, 6, 8, 6);
+      ctx.fillStyle = "#c96a4a";
+      ctx.fillRect(6, 7, 3, 3);
+    } else if (key === "fish") {
+      ctx.fillStyle = "#4aa3c2";
+      ctx.fillRect(4, 7, 8, 4);
+      ctx.fillStyle = "#2f6fb2";
+      ctx.fillRect(11, 8, 2, 2);
+      ctx.fillStyle = "#d9f2ff";
+      ctx.fillRect(6, 8, 1, 1);
+    }
+    return canvas;
   }
 }
