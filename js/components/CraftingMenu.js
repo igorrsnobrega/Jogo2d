@@ -14,6 +14,7 @@ export default class CraftingMenu {
     this.grid = Array.from({ length: 9 }, () => null);
     this.buildGrid();
     this.bindActions();
+    this.currentRecipe = null;
   }
 
   toggle() {
@@ -59,6 +60,14 @@ export default class CraftingMenu {
       this.grid = this.grid.map(() => null);
       this.render(this.getState());
     });
+    this.resultEl.addEventListener("click", () => {
+      const state = this.getState();
+      const recipe = this.findRecipe(state);
+      if (!recipe) return;
+      this.onCraft(recipe.id, this.getGridCounts());
+      this.grid = this.grid.map(() => null);
+      this.render(this.getState());
+    });
   }
 
   placeInGrid(index, key) {
@@ -95,6 +104,7 @@ export default class CraftingMenu {
     const counts = this.getGridCounts();
     const preview = this.matchPreview(counts);
     const current = preview && preview.canCraft(state, counts) ? preview : null;
+    this.currentRecipe = current;
 
     this.gridEl.querySelectorAll(".slot").forEach((slot) => {
       const index = Number(slot.dataset.index);

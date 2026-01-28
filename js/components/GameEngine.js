@@ -49,6 +49,8 @@ export default class GameEngine {
     this.zoom = 1;
     this.minZoom = 0.7;
     this.maxZoom = 1.6;
+    this.moveTarget = null;
+    this.moveClickFeedback = null;
     this.input = {
       keys: { w: false, a: false, s: false, d: false },
     };
@@ -67,7 +69,7 @@ export default class GameEngine {
       if (key === "c") this.craftingMenu.toggle();
       if (key === "i") this.inventoryMenu.toggle();
     });
-    this.canvas.addEventListener("click", () => this.tryCookAtCampfire());
+    this.canvas.addEventListener("click", (e) => this.handleCanvasClick(e));
     const actionBtn = document.getElementById("action-button");
     if (actionBtn) actionBtn.addEventListener("click", () => this.handleAction());
     this.bindTimeControls();
@@ -135,6 +137,10 @@ export default class GameEngine {
       this.handleFishing();
       return;
     }
+    if (this.selectedItem === "rawMeat") {
+      this.tryCookAtCampfire();
+      return;
+    }
     if (this.selectedItem === "cookedMeat" || this.selectedItem === "fish") {
       this.eat(this.selectedItem);
       return;
@@ -148,12 +154,17 @@ export default class GameEngine {
 
   update(dt) {
     const scaled = dt * this.timeScale;
-    this.player.update(this.input, scaled);
+    this.player.update(this.input, scaled, this.moveTarget);
     this.entities.update(scaled);
     this.health.update(scaled);
     this.dayTime = (this.dayTime + scaled) % this.dayLength;
     this.updateFloatTexts(scaled);
     if (this.eatCooldown > 0) this.eatCooldown = Math.max(0, this.eatCooldown - scaled);
+    if (this.moveTarget && this.playerReachedTarget()) this.moveTarget = null;
+    if (this.moveClickFeedback) {
+      this.moveClickFeedback.life -= scaled;
+      if (this.moveClickFeedback.life <= 0) this.moveClickFeedback = null;
+    }
     if (this.isFishing) {
       this.fishTimer += scaled;
       if (this.fishTimer >= this.fishDelay) {
@@ -185,6 +196,7 @@ export default class GameEngine {
       isFishing: this.isFishing,
       fishTarget: this.fishTarget,
     });
+    this.renderMoveTarget();
     this.renderLighting();
     this.renderFloatTexts();
     ctx.restore();
@@ -338,6 +350,35 @@ export default class GameEngine {
 
   handleConsume(resourceKey) {
     this.eat(resourceKey);
+  }
+
+  handleCanvasClick(e) {
+    if (e.target !== this.canvas) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const { camX, camY } = this.getCameraOffset();
+    const worldX = camX + (e.clientX - rect.left) / this.zoom;
+    const worldY = camY + (e.clientY - rect.top) / this.zoom;
+    this.moveTarget = { x: worldX - this.player.size / 2, y: worldY - this.player.size / 2 };
+    this.moveClickFeedback = { x: worldX, y: worldY, life: 0.4 };
+  }
+
+  playerReachedTarget() {
+    if (!this.moveTarget) return true;
+    const dx = this.player.x - this.moveTarget.x;
+    const dy = this.player.y - this.moveTarget.y;
+    return Math.hypot(dx, dy) < 4;
+  }
+
+  renderMoveTarget() {
+    if (!this.moveClickFeedback) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.strokeStyle = `rgba(110, 207, 122, ${this.moveClickFeedback.life})`;
+    ctx.lineWidth = 2 / this.zoom;
+    ctx.beginPath();
+    ctx.arc(this.moveClickFeedback.x, this.moveClickFeedback.y, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   matchCounts(counts, required) {

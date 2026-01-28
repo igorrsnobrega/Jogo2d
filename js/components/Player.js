@@ -42,17 +42,29 @@ export default class Player {
     return true;
   }
 
-  update(input, dt) {
+  update(input, dt, target) {
     const move = this.speed * dt;
     let nx = this.x;
     let ny = this.y;
-    if (input.keys.w) ny -= move;
-    if (input.keys.s) ny += move;
-    if (input.keys.a) nx -= move;
-    if (input.keys.d) nx += move;
+    const usingKeys = input.keys.w || input.keys.a || input.keys.s || input.keys.d;
+    if (usingKeys) {
+      if (input.keys.w) ny -= move;
+      if (input.keys.s) ny += move;
+      if (input.keys.a) nx -= move;
+      if (input.keys.d) nx += move;
+    } else if (target) {
+      const dx = target.x - this.x;
+      const dy = target.y - this.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 1) {
+        const step = Math.min(move, dist);
+        nx = this.x + (dx / dist) * step;
+        ny = this.y + (dy / dist) * step;
+      }
+    }
     if (this.canMove(nx, this.y)) this.x = nx;
     if (this.canMove(this.x, ny)) this.y = ny;
-    this.isMoving = input.keys.w || input.keys.a || input.keys.s || input.keys.d;
+    this.isMoving = usingKeys || (target && Math.hypot(target.x - this.x, target.y - this.y) > 2);
     this.animTime = (this.animTime ?? 0) + (this.isMoving ? dt : 0);
   }
 
