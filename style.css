@@ -1,0 +1,92 @@
+:root {
+  --bg: #111417;
+  --grass: #2e8b57;
+  --sand: #e3c16f;
+  --water: #2f6fb2;
+  --tree: #7a4b2a;
+  --stone: #9b9b9b;
+  --animal: #e38bb6;
+  --player: #2b66d9;
+  --hud: #1f2328;
+  --life: #d64545;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  color: #f0f0f0;
+}
+
+body {
+  background: radial-gradient(circle at top, #1b2026, var(--bg));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+#game-wrap {
+  position: relative;
+  border: 2px solid #2c3138;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+canvas {
+  display: block;
+  background: #0b0f13;
+}
+
+#hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 12px;
+  background: linear-gradient(
+    90deg,
+    rgba(31, 35, 40, 0.95),
+    rgba(31, 35, 40, 0.6)
+  );
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#life-bar {
+  flex: 1;
+  height: 14px;
+  background: #333;
+  border: 1px solid #444;
+  position: relative;
+  overflow: hidden;
+}
+
+#life-bar span {
+  display: block;
+  height: 100%;
+  background: var(--life);
+  width: 100%;
+}
+
+#inventory {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+#footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 12px;
+  background: rgba(31, 35, 40, 0.85);
+  font-size: 12px;
+  display: flex;
+  gap: 16px;
+}
