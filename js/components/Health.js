@@ -8,11 +8,8 @@ export default class Health {
   }
 
   update(dt) {
-    this.decayTimer += dt;
-    if (this.decayTimer >= this.decayInterval) {
-      this.decayTimer = 0;
-      this.life = Math.max(0, this.life - this.decayAmount);
-    }
+    // Health no longer decays over time.
+    this.decayTimer = 0;
   }
 
   heal(amount) {

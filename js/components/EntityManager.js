@@ -11,6 +11,10 @@ export default class EntityManager {
     this.animals = [];
     this.campfires = [];
     this.tents = [];
+    this.buildings = [];
+    this.drops = [];
+    this.respawnTimer = 0;
+    this.respawnInterval = 20;
     this.time = 0;
     this.spawnEntities();
   }
@@ -51,6 +55,9 @@ export default class EntityManager {
     if (tree) {
       this.trees = this.trees.filter((t) => t !== tree);
       inventory.add(Wood.key, 1);
+      if (Math.random() < 0.2) {
+        this.spawnDrop("seed", tree.x, tree.y);
+      }
       return { key: Wood.key, x: tree.x, y: tree.y };
     }
     const stone = this.getNearbyEntity(this.stones, player, radius);
@@ -66,11 +73,47 @@ export default class EntityManager {
       inventory.add(RawMeat.key, 1);
       return { key: RawMeat.key, x: animal.x, y: animal.y };
     }
+    const drop = this.drops.find((d) => Math.hypot(d.x - player.x, d.y - player.y) < radius);
+    if (drop) {
+      this.drops = this.drops.filter((d) => d !== drop);
+      inventory.add(drop.type, 1);
+      return { key: drop.type, x: drop.x, y: drop.y };
+    }
     return null;
   }
 
   update(dt) {
     this.time += dt;
+    this.respawnTimer += dt;
+    if (this.respawnTimer >= this.respawnInterval) {
+      this.respawnTimer = 0;
+      this.tryRespawn();
+    }
+    this.updateDrops(dt);
+  }
+
+  tryRespawn() {
+    const treeTarget = 22;
+    const stoneTarget = 16;
+    const animalTarget = 10;
+    if (this.trees.length < treeTarget) this.trees.push(...this.spawn("tree", 1));
+    if (this.stones.length < stoneTarget) this.stones.push(...this.spawn("stone", 1));
+    if (this.animals.length < animalTarget) this.animals.push(...this.spawn("animal", 1));
+  }
+
+  spawnDrop(type, x, y) {
+    this.drops.push({
+      type,
+      x,
+      y,
+      life: 10,
+    });
+  }
+
+  updateDrops(dt) {
+    this.drops = this.drops
+      .map((d) => ({ ...d, life: d.life - dt }))
+      .filter((d) => d.life > 0);
   }
 
   isBlockedRect(rect) {
@@ -113,6 +156,9 @@ export default class EntityManager {
     for (const tent of this.tents) {
       rects.push(this.getTentRect(tent));
     }
+    for (const b of this.buildings) {
+      rects.push(this.getBuildingRect(b));
+    }
     return rects;
   }
 
@@ -133,6 +179,15 @@ export default class EntityManager {
       y: tent.y + size * 0.45,
       w: size * 0.8,
       h: size * 0.35,
+    };
+  }
+
+  getBuildingRect(building) {
+    return {
+      x: building.x,
+      y: building.y,
+      w: building.w,
+      h: building.h,
     };
   }
 
@@ -235,6 +290,15 @@ export default class EntityManager {
       ctx.fillRect(x - size * 0.04, y + size * 0.32, size * 0.06, size * 0.06);
     }
 
+    for (const drop of this.drops) {
+      if (drop.type === "seed") {
+        ctx.fillStyle = "#c9b15a";
+        ctx.fillRect(drop.x + 6, drop.y + 6, 3, 6);
+        ctx.fillStyle = "#8b6a2b";
+        ctx.fillRect(drop.x + 5, drop.y + 5, 2, 2);
+      }
+    }
+
     for (const fire of this.campfires) {
       const size = this.tileSize * 0.6;
       const x = fire.x;
@@ -261,12 +325,53 @@ export default class EntityManager {
       ctx.fillStyle = "#a4b2c5";
       ctx.fillRect(x + size * 0.35, y + size * 0.25, size * 0.2, size * 0.2);
     }
+
+    for (const b of this.buildings) {
+      const { x, y, w, h } = b;
+      if (b.type === "house") {
+        ctx.fillStyle = b.completed ? "#6b5a4a" : "#3b3f4a";
+        ctx.fillRect(x, y + h * 0.45, w, h * 0.55);
+        ctx.fillStyle = b.completed ? "#8b7560" : "#555b66";
+        ctx.fillRect(x + w * 0.1, y + h * 0.2, w * 0.8, h * 0.35);
+        ctx.fillStyle = "#2f2f2f";
+        ctx.fillRect(x + w * 0.45, y + h * 0.55, w * 0.1, h * 0.2);
+      } else if (b.type === "farm") {
+        ctx.fillStyle = "#4b6b3a";
+        ctx.fillRect(x, y + h * 0.4, w, h * 0.6);
+        ctx.fillStyle = "#6f8b4a";
+        ctx.fillRect(x + w * 0.1, y + h * 0.45, w * 0.8, h * 0.4);
+      } else if (b.type === "storage") {
+        ctx.fillStyle = b.completed ? "#555c64" : "#3b3f4a";
+        ctx.fillRect(x, y + h * 0.45, w, h * 0.55);
+        ctx.fillStyle = b.completed ? "#7a828c" : "#555b66";
+        ctx.fillRect(x + w * 0.1, y + h * 0.2, w * 0.8, h * 0.35);
+      } else if (b.type === "church") {
+        ctx.fillStyle = b.completed ? "#7b776f" : "#3b3f4a";
+        ctx.fillRect(x, y + h * 0.45, w, h * 0.55);
+        ctx.fillStyle = b.completed ? "#9a948b" : "#555b66";
+        ctx.fillRect(x + w * 0.1, y + h * 0.15, w * 0.8, h * 0.4);
+        ctx.fillStyle = "#b0a89a";
+        ctx.fillRect(x + w * 0.45, y, w * 0.1, h * 0.25);
+      }
+      if (!b.completed) {
+        ctx.fillStyle = "#d64545";
+        ctx.fillRect(x, y, w * (b.progress / 100), 3);
+      }
+      if (b.type === "farm") {
+        ctx.fillStyle = b.farmStage === 2 ? "#7ccf7a" : "#4b6b3a";
+        ctx.fillRect(x + w * 0.1, y + h * 0.55, w * 0.8, h * 0.3);
+      }
+    }
   }
 
   placeCampfire(player) {
     const radius = this.tileSize * 0.8;
     if (this.getNearbyEntity(this.campfires, player, radius)) return false;
     const { tx, ty } = player.getTilePos();
+    return this.placeCampfireAt(tx, ty, player);
+  }
+
+  placeCampfireAt(tx, ty, player) {
     if (this.map.isWater(tx, ty) || this.map.isSand(tx, ty)) return false;
     const candidate = {
       x: tx * this.tileSize + 6,
@@ -275,7 +380,7 @@ export default class EntityManager {
     };
     const campRect = this.getCampfireRect(candidate);
     if (this.isBlockedRect(campRect)) return false;
-    if (this.rectsOverlap(player.getRect(), campRect)) return false;
+    if (player && this.rectsOverlap(player.getRect(), campRect)) return false;
     this.campfires.push({
       x: candidate.x,
       y: candidate.y,
@@ -298,6 +403,17 @@ export default class EntityManager {
     if (this.rectsOverlap(player.getRect(), tentRect)) return false;
     this.tents.push(candidate);
     return true;
+  }
+
+  placeBuilding(building) {
+    const rect = this.getBuildingRect(building);
+    if (this.isBlockedRect(rect)) return false;
+    this.buildings.push(building);
+    return true;
+  }
+
+  findBuildingAt(x, y) {
+    return this.buildings.find((b) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
   }
 
   isNearCampfire(player) {

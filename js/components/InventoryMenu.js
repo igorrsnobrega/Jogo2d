@@ -6,11 +6,9 @@ export default class InventoryMenu {
     this.onSelect = onSelect;
     this.menu = document.getElementById("inventory-menu");
     this.grid = document.getElementById("inventory-grid");
+    this.clearBtn = document.getElementById("clear-selection");
     this.isOpen = false;
-    document.addEventListener("click", (e) => {
-      if (!this.isOpen) return;
-      if (!this.menu.contains(e.target)) this.onSelect(null);
-    });
+    if (this.clearBtn) this.clearBtn.addEventListener("click", () => this.onSelect(null));
   }
 
   toggle() {
@@ -30,7 +28,7 @@ export default class InventoryMenu {
       const item = document.createElement("div");
       item.className = "item";
       item.style.background = getComputedStyle(document.documentElement).getPropertyValue(res.colorVar);
-      if (["axe", "tent", "fishingRod", "campfire", "wood", "stone", "rawMeat", "cookedMeat", "fish"].includes(res.key)) {
+      if (["axe", "tent", "fishingRod", "campfire", "wood", "stone", "rawMeat", "cookedMeat", "fish", "food", "seed"].includes(res.key)) {
         item.appendChild(this.buildIconCanvas(res.key));
       } else {
         item.textContent = res.label.slice(0, 2).toUpperCase();
@@ -130,6 +128,16 @@ export default class InventoryMenu {
       ctx.fillRect(11, 8, 2, 2);
       ctx.fillStyle = "#d9f2ff";
       ctx.fillRect(6, 8, 1, 1);
+    } else if (key === "food") {
+      ctx.fillStyle = "#6fbf6a";
+      ctx.fillRect(5, 6, 6, 6);
+      ctx.fillStyle = "#3f8f3f";
+      ctx.fillRect(6, 5, 4, 2);
+    } else if (key === "seed") {
+      ctx.fillStyle = "#c9b15a";
+      ctx.fillRect(7, 6, 2, 4);
+      ctx.fillStyle = "#8b6a2b";
+      ctx.fillRect(6, 5, 1, 1);
     }
     return canvas;
   }

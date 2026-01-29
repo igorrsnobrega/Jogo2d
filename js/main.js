@@ -8,7 +8,9 @@ import CampfireItem from "./components/resources/CampfireItem.js";
 import FishingRod from "./components/resources/FishingRod.js";
 import AxeItem from "./components/resources/AxeItem.js";
 import TentItem from "./components/resources/TentItem.js";
+import Food from "./components/resources/Food.js";
+import Seed from "./components/resources/Seed.js";
 
 const canvas = document.getElementById("game");
-const resources = [Wood, Stone, RawMeat, CookedMeat, Fish, CampfireItem, FishingRod, AxeItem, TentItem];
+const resources = [Wood, Stone, RawMeat, CookedMeat, Fish, CampfireItem, FishingRod, AxeItem, TentItem, Food, Seed];
 new GameEngine(canvas, resources);

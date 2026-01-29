@@ -13,6 +13,7 @@
         <div id="life-bar"><span id="life-fill"></span></div>
         <div id="hud-message"></div>
         <div id="hud-clock"></div>
+        <div id="hud-villagers"></div>
         <div id="time-controls">
           Tempo:
           <button data-speed="0.5">0.5x</button>
@@ -30,6 +31,28 @@
       <div id="inventory-menu" class="hidden">
         <div class="crafting-header">Inventário</div>
         <div class="inventory-grid" id="inventory-grid"></div>
+        <button id="clear-selection">Limpar seleção (Esc)</button>
+      </div>
+      <div id="build-menu" class="hidden">
+        <div class="crafting-header">Construções</div>
+        <div id="build-list"></div>
+      </div>
+      <div id="building-panel" class="hidden">
+        <div class="crafting-header">Edificação</div>
+        <div id="building-info"></div>
+        <div class="building-actions">
+          <button id="assign-minus">-</button>
+          <span id="assign-count">0</span>
+          <button id="assign-plus">+</button>
+        </div>
+        <div class="building-farm">
+          <button id="farm-plant">Plantar</button>
+          <button id="farm-harvest">Colher</button>
+        </div>
+      </div>
+      <div id="global-assign" class="hidden">
+        <div class="crafting-header">Distribuição Global</div>
+        <div id="global-list"></div>
       </div>
       <div id="crafting-menu" class="hidden">
         <div class="crafting-header">Combinar Elementos</div>
@@ -48,7 +71,7 @@
         <div class="inventory-grid" id="crafting-inventory"></div>
       </div>
       <div id="footer">
-        WASD mover | Espaço coletar | C combinar | I inventário | E ação
+        WASD mover | Espaço coletar | C combinar | I inventário | B construir | E ação
         <button id="action-button">Ação</button>
         <span id="action-selected"></span>
       </div>

@@ -76,6 +76,12 @@ canvas {
   color: #d7e8ff;
 }
 
+#hud-villagers {
+  margin-left: 12px;
+  font-size: 12px;
+  color: #d7e8ff;
+}
+
 #time-controls {
   margin-left: 12px;
   font-size: 11px;
@@ -167,6 +173,110 @@ canvas {
   display: none;
 }
 
+#build-menu {
+  position: absolute;
+  left: 12px;
+  top: 240px;
+  width: 220px;
+  background: rgba(31, 35, 40, 0.95);
+  border: 1px solid #3a4048;
+  padding: 10px;
+  font-size: 12px;
+}
+
+#build-menu.hidden {
+  display: none;
+}
+
+#build-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#build-list button {
+  background: #2c6b4f;
+  border: none;
+  color: #fff;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#building-panel {
+  position: absolute;
+  right: 12px;
+  top: 240px;
+  width: 220px;
+  background: rgba(31, 35, 40, 0.95);
+  border: 1px solid #3a4048;
+  padding: 10px;
+  font-size: 12px;
+}
+
+#building-panel.hidden {
+  display: none;
+}
+
+#global-assign {
+  position: absolute;
+  right: 12px;
+  top: 420px;
+  width: 220px;
+  background: rgba(31, 35, 40, 0.95);
+  border: 1px solid #3a4048;
+  padding: 10px;
+  font-size: 12px;
+}
+
+#global-assign.hidden {
+  display: none;
+}
+
+#global-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.global-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: space-between;
+}
+
+.global-row button {
+  background: #3b6bdc;
+  border: none;
+  color: #fff;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.building-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.building-actions button,
+.building-farm button {
+  background: #3b6bdc;
+  border: none;
+  color: #fff;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.building-farm {
+  display: flex;
+  gap: 6px;
+}
+
 #crafting-menu {
   position: absolute;
   right: 12px;
@@ -237,6 +347,17 @@ canvas {
   border: none;
   color: #fff;
   cursor: pointer;
+}
+
+#clear-selection {
+  margin-top: 8px;
+  width: 100%;
+  background: #3a3f46;
+  border: none;
+  color: #fff;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 11px;
 }
 
 .crafting-actions {

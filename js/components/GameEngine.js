@@ -7,6 +7,7 @@ import Fish from "./resources/Fish.js";
 import HUD from "./HUD.js";
 import CraftingMenu from "./CraftingMenu.js";
 import InventoryMenu from "./InventoryMenu.js";
+import BuildMenu from "./BuildMenu.js";
 
 export default class GameEngine {
   constructor(canvas, resources) {
@@ -32,12 +33,16 @@ export default class GameEngine {
       this.getCraftState.bind(this)
     );
     this.selectedItem = null;
+    this.selectedBuilding = null;
+    this.buildMode = null;
     this.inventoryMenu = new InventoryMenu(
       resources,
       this.handleConsume.bind(this),
       this.getCraftState.bind(this),
       this.handleSelectItem.bind(this)
     );
+    this.buildingsCatalog = this.getBuildingsCatalog();
+    this.buildMenu = new BuildMenu(this.buildingsCatalog, this.handleSelectBuilding.bind(this));
     this.isFishing = false;
     this.fishTimer = 0;
     this.fishDelay = 1.5;
@@ -51,6 +56,7 @@ export default class GameEngine {
     this.maxZoom = 1.6;
     this.moveTarget = null;
     this.moveClickFeedback = null;
+    this.villagerEntities = [];
     this.input = {
       keys: { w: false, a: false, s: false, d: false },
     };
@@ -68,6 +74,8 @@ export default class GameEngine {
       if (key === "e") this.handleAction();
       if (key === "c") this.craftingMenu.toggle();
       if (key === "i") this.inventoryMenu.toggle();
+      if (key === "escape") this.handleSelectItem(null);
+      if (key === "b") this.buildMenu.toggle();
     });
     this.canvas.addEventListener("click", (e) => this.handleCanvasClick(e));
     const actionBtn = document.getElementById("action-button");
@@ -75,6 +83,14 @@ export default class GameEngine {
     this.bindTimeControls();
     this.bindZoomControls();
     window.addEventListener("resize", () => this.resizeCanvas());
+    const assignPlus = document.getElementById("assign-plus");
+    const assignMinus = document.getElementById("assign-minus");
+    const farmPlant = document.getElementById("farm-plant");
+    const farmHarvest = document.getElementById("farm-harvest");
+    if (assignPlus) assignPlus.addEventListener("click", () => this.assignWorker(1));
+    if (assignMinus) assignMinus.addEventListener("click", () => this.assignWorker(-1));
+    if (farmPlant) farmPlant.addEventListener("click", () => this.plantFarm());
+    if (farmHarvest) farmHarvest.addEventListener("click", () => this.harvestFarm());
     window.addEventListener("keyup", (e) => {
       const key = e.key.toLowerCase();
       if (["w", "a", "s", "d"].includes(key)) this.input.keys[key] = false;
@@ -177,6 +193,7 @@ export default class GameEngine {
         console.log("Você pescou 1 peixe!");
       }
     }
+    this.updateBuildings(scaled);
   }
 
   render() {
@@ -196,6 +213,7 @@ export default class GameEngine {
       isFishing: this.isFishing,
       fishTarget: this.fishTarget,
     });
+    this.renderVillagers(ctx);
     this.renderMoveTarget();
     this.renderLighting();
     this.renderFloatTexts();
@@ -203,10 +221,12 @@ export default class GameEngine {
   }
 
   updateHUD(dt) {
-    this.hud.update(this.health.percent(), dt, this.getClockText());
+    this.hud.update(this.health.percent(), dt, this.getClockText(), this.getVillagerText());
     this.craftingMenu.render(this.getCraftState());
     this.inventoryMenu.render(this.selectedItem);
     this.updateActionLabel();
+    this.renderBuildingPanel();
+    this.renderGlobalAssign();
   }
 
   loop(now) {
@@ -223,6 +243,7 @@ export default class GameEngine {
       inventory: this.inventory,
       nearCampfire: this.entities.isNearCampfire(this.player),
       eatCooldown: this.eatCooldown,
+      villagers: this.villagers,
     };
   }
 
@@ -358,6 +379,19 @@ export default class GameEngine {
     const { camX, camY } = this.getCameraOffset();
     const worldX = camX + (e.clientX - rect.left) / this.zoom;
     const worldY = camY + (e.clientY - rect.top) / this.zoom;
+    if (this.selectedItem === "campfire") {
+      this.placeCampfireAt(worldX, worldY);
+      return;
+    }
+    const building = this.entities.findBuildingAt(worldX, worldY);
+    if (building) {
+      this.selectedBuilding = building;
+      return;
+    }
+    if (this.buildMode) {
+      this.tryPlaceBuilding(worldX, worldY);
+      return;
+    }
     this.moveTarget = { x: worldX - this.player.size / 2, y: worldY - this.player.size / 2 };
     this.moveClickFeedback = { x: worldX, y: worldY, life: 0.4 };
   }
@@ -381,6 +415,339 @@ export default class GameEngine {
     ctx.restore();
   }
 
+  getBuildingsCatalog() {
+    const labelFor = (key) => {
+      const res = this.resources.find((r) => r.key === key);
+      return res ? res.label : key;
+    };
+    return [
+      { key: "house", label: "Casa", cost: { wood: 5, stone: 2 }, tool: "axe", w: 48, h: 48, capacity: 2 },
+      { key: "farm", label: "Fazenda", cost: { wood: 4, stone: 2 }, tool: "axe", w: 64, h: 48 },
+      { key: "storage", label: "Depósito", cost: { wood: 6, stone: 4 }, tool: "axe", w: 64, h: 48 },
+      { key: "church", label: "Igreja", cost: { wood: 8, stone: 6 }, tool: "axe", w: 80, h: 64 },
+    ].map((b) => ({
+      ...b,
+      costText: Object.entries(b.cost).map(([k, v]) => `${v} ${labelFor(k)}`).join(", "),
+    }));
+  }
+
+  handleSelectBuilding(key) {
+    this.buildMode = key;
+    this.selectedBuilding = null;
+    this.hud.showMessage(`Selecionado: ${key}`);
+  }
+
+  tryPlaceBuilding(x, y) {
+    const spec = this.buildingsCatalog.find((b) => b.key === this.buildMode);
+    if (!spec) return;
+    if (spec.tool && !this.inventory.hasTool(spec.tool)) {
+      this.hud.showMessage("Precisa de ferramenta!");
+      return;
+    }
+    if (!this.inventory.canAfford(spec.cost)) {
+      this.hud.showMessage("Recursos insuficientes.");
+      return;
+    }
+    const bx = Math.floor(x / this.tileSize) * this.tileSize;
+    const by = Math.floor(y / this.tileSize) * this.tileSize;
+    if (this.areaHasBlockedTiles(bx, by, spec.w, spec.h)) {
+      this.hud.showMessage("Terreno inválido.");
+      return;
+    }
+    const building = {
+      id: crypto.randomUUID(),
+      type: spec.key,
+      x: bx,
+      y: by,
+      w: spec.w,
+      h: spec.h,
+      progress: 0,
+      completed: false,
+      workers: 0,
+      farmStage: 0,
+      farmTimer: 0,
+    };
+    if (!this.entities.placeBuilding(building)) return;
+    this.inventory.spend(spec.cost);
+    this.buildMode = null;
+  }
+
+  areaHasBlockedTiles(x, y, w, h) {
+    const startX = Math.floor(x / this.tileSize);
+    const startY = Math.floor(y / this.tileSize);
+    const endX = Math.floor((x + w) / this.tileSize);
+    const endY = Math.floor((y + h) / this.tileSize);
+    for (let ty = startY; ty <= endY; ty++) {
+      for (let tx = startX; tx <= endX; tx++) {
+        if (this.map.isWater(tx, ty) || this.map.isSand(tx, ty)) return true;
+      }
+    }
+    return false;
+  }
+
+  updateBuildings(dt) {
+    if (!this.villagers) {
+      this.villagers = { total: 0, available: 0, capacity: 0, timer: 0 };
+    }
+    this.villagers.capacity = this.entities.buildings
+      .filter((b) => b.completed && b.type === "house")
+      .reduce((acc, b) => acc + 2, 0);
+    this.villagers.timer += dt;
+    if (this.villagers.total < this.villagers.capacity && this.villagers.timer >= 60) {
+      this.villagers.timer = 0;
+      this.villagers.total += 1;
+      this.villagers.available += 1;
+      this.hud.showMessage("Novo habitante chegou!");
+    }
+    for (const b of this.entities.buildings) {
+      const playerHelp = !b.completed && this.isPlayerNearBuilding(b) ? 1 : 0;
+      if (!b.completed && (b.workers > 0 || playerHelp > 0)) {
+        b.progress = Math.min(100, b.progress + (1 + b.workers + playerHelp) * dt * 2);
+        if (b.progress >= 100) b.completed = true;
+      }
+      if (b.type === "farm" && b.completed && b.farmStage === 1) {
+        b.farmTimer += dt;
+        if (b.farmTimer >= 30) {
+          b.farmStage = 2;
+          b.farmTimer = 0;
+        }
+      }
+    }
+    this.syncVillagers();
+    this.updateVillagerMovement(dt);
+  }
+
+  isPlayerNearBuilding(building) {
+    const px = this.player.x + this.player.size / 2;
+    const py = this.player.y + this.player.size / 2;
+    const bx = building.x + building.w / 2;
+    const by = building.y + building.h / 2;
+    return Math.hypot(px - bx, py - by) < this.tileSize * 2.5;
+  }
+
+  syncVillagers() {
+    if (!this.villagers) return;
+    while (this.villagerEntities.length < this.villagers.total) {
+      const pos = this.getRandomLandPosition();
+      this.villagerEntities.push({
+        x: pos.x,
+        y: pos.y,
+        size: this.tileSize * 0.45,
+        speed: this.tileSize * 1.2,
+        target: null,
+        home: null,
+        color: this.randomVillagerColor(),
+        skin: this.randomSkin(),
+        phase: Math.random() * Math.PI * 2,
+        state: "idle",
+      });
+    }
+  }
+
+  updateVillagerMovement(dt) {
+    if (!this.villagerEntities.length) return;
+    this.assignVillagersToBuildings();
+    for (const v of this.villagerEntities) {
+      if (!v.target || this.reachedTarget(v)) {
+        v.target = v.home || this.getRandomLandPosition();
+      }
+      if (v.home && this.reachedTarget(v)) {
+        v.state = "working";
+        continue;
+      }
+      v.state = "walking";
+      const dx = v.target.x - v.x;
+      const dy = v.target.y - v.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 1) {
+        const step = Math.min(v.speed * dt, dist);
+        const nx = v.x + (dx / dist) * step;
+        const ny = v.y + (dy / dist) * step;
+        const tx = Math.floor(nx / this.tileSize);
+        const ty = Math.floor(ny / this.tileSize);
+        if (!this.map.isWater(tx, ty) && !this.map.isSand(tx, ty) && !this.entities.isBlockedRect({ x: nx, y: ny, w: v.size, h: v.size }) && !this.overlapsOtherVillagers(v, nx, ny)) {
+          v.x = nx;
+          v.y = ny;
+        } else {
+          v.target = null;
+        }
+      }
+    }
+  }
+
+  reachedTarget(v) {
+    if (!v.target) return true;
+    return Math.hypot(v.target.x - v.x, v.target.y - v.y) < 4;
+  }
+
+  getRandomLandPosition() {
+    for (let i = 0; i < 200; i++) {
+      const tx = Math.floor(Math.random() * this.cols);
+      const ty = Math.floor(Math.random() * this.rows);
+      if (this.map.isWater(tx, ty) || this.map.isSand(tx, ty)) continue;
+      return {
+        x: tx * this.tileSize + this.tileSize * 0.25,
+        y: ty * this.tileSize + this.tileSize * 0.25,
+      };
+    }
+    return { x: this.tileSize, y: this.tileSize };
+  }
+
+  renderVillagers(ctx) {
+    if (!this.villagerEntities.length) return;
+    for (const v of this.villagerEntities) {
+      const w = v.size;
+      const h = v.size;
+      const x = v.x;
+      const y = v.y;
+      const headH = h * 0.35;
+      const bodyH = h * 0.4;
+      const legH = h * 0.25;
+      const legW = w * 0.22;
+      const swing = v.state === "walking" ? Math.sin((performance.now() / 200) + v.phase) * (w * 0.08) : 0;
+      // Head
+      ctx.fillStyle = v.skin;
+      ctx.fillRect(x + w * 0.25, y, w * 0.5, headH);
+      // Hair cap
+      ctx.fillStyle = "#3a2b1b";
+      ctx.fillRect(x + w * 0.22, y, w * 0.56, headH * 0.45);
+      // Body
+      ctx.fillStyle = v.color;
+      ctx.fillRect(x + w * 0.2, y + headH, w * 0.6, bodyH);
+      // Arms
+      ctx.fillStyle = v.color;
+      ctx.fillRect(x + w * 0.1, y + headH + bodyH * 0.2, w * 0.15, bodyH * 0.6);
+      ctx.fillRect(x + w * 0.75, y + headH + bodyH * 0.2, w * 0.15, bodyH * 0.6);
+      // Legs (swing)
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(x + w * 0.28 + swing, y + headH + bodyH, legW, legH);
+      ctx.fillRect(x + w * 0.52 - swing, y + headH + bodyH, legW, legH);
+    }
+  }
+
+  assignVillagersToBuildings() {
+    const targets = this.entities.buildings.filter((b) => b.workers > 0 && !b.completed);
+    if (!targets.length) return;
+    let i = 0;
+    for (const v of this.villagerEntities) {
+      const target = targets[i % targets.length];
+      v.home = {
+        x: target.x + target.w * 0.4,
+        y: target.y + target.h * 0.8,
+      };
+      if (v.state === "working") v.target = v.home;
+      i++;
+    }
+  }
+
+  overlapsOtherVillagers(current, nx, ny) {
+    return this.villagerEntities.some((v) => {
+      if (v === current) return false;
+      const dx = (v.x + v.size / 2) - (nx + current.size / 2);
+      const dy = (v.y + v.size / 2) - (ny + current.size / 2);
+      return Math.hypot(dx, dy) < current.size * 0.6;
+    });
+  }
+
+  randomVillagerColor() {
+    const colors = ["#2b66d9", "#2f8f6a", "#a14d2a", "#7c4da1", "#2a7fa1"];
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  randomSkin() {
+    const skins = ["#e1b58a", "#cfa579", "#b07a55", "#9a6b45"];
+    return skins[Math.floor(Math.random() * skins.length)];
+  }
+
+  getVillagerText() {
+    if (!this.villagers) return "";
+    return `Habitantes: ${this.villagers.available}/${this.villagers.total} (cap ${this.villagers.capacity})`;
+  }
+
+  renderBuildingPanel() {
+    const panel = document.getElementById("building-panel");
+    const info = document.getElementById("building-info");
+    const assignCount = document.getElementById("assign-count");
+    const farmPlant = document.getElementById("farm-plant");
+    const farmHarvest = document.getElementById("farm-harvest");
+    if (!panel || !info) return;
+    if (!this.selectedBuilding) {
+      panel.classList.add("hidden");
+      return;
+    }
+    panel.classList.remove("hidden");
+    const villagerText = this.villagers
+      ? ` | Habitantes: ${this.villagers.available}/${this.villagers.total} (cap ${this.villagers.capacity})`
+      : "";
+    info.textContent = `${this.selectedBuilding.type} - ${this.selectedBuilding.completed ? "Pronto" : "Construindo"} ${Math.floor(this.selectedBuilding.progress)}%${villagerText}`;
+    assignCount.textContent = String(this.selectedBuilding.workers);
+    farmPlant.style.display = this.selectedBuilding.type === "farm" ? "inline-block" : "none";
+    farmHarvest.style.display = this.selectedBuilding.type === "farm" ? "inline-block" : "none";
+    farmPlant.disabled = !(this.selectedBuilding.completed && this.selectedBuilding.farmStage === 0 && this.inventory.items.seed > 0);
+    farmHarvest.disabled = !(this.selectedBuilding.completed && this.selectedBuilding.farmStage === 2);
+  }
+
+  renderGlobalAssign() {
+    const panel = document.getElementById("global-assign");
+    const list = document.getElementById("global-list");
+    if (!panel || !list) return;
+    panel.classList.remove("hidden");
+    list.innerHTML = "";
+    for (const b of this.entities.buildings) {
+      const row = document.createElement("div");
+      row.className = "global-row";
+      const name = document.createElement("div");
+      name.textContent = `${b.type} ${Math.floor(b.progress)}%`;
+      const controls = document.createElement("div");
+      const minus = document.createElement("button");
+      const plus = document.createElement("button");
+      const count = document.createElement("span");
+      minus.textContent = "-";
+      plus.textContent = "+";
+      count.textContent = String(b.workers);
+      minus.addEventListener("click", () => {
+        this.selectedBuilding = b;
+        this.assignWorker(-1);
+      });
+      plus.addEventListener("click", () => {
+        this.selectedBuilding = b;
+        this.assignWorker(1);
+      });
+      controls.appendChild(minus);
+      controls.appendChild(count);
+      controls.appendChild(plus);
+      row.appendChild(name);
+      row.appendChild(controls);
+      list.appendChild(row);
+    }
+  }
+
+  assignWorker(delta) {
+    if (!this.selectedBuilding || !this.villagers) return;
+    if (delta > 0 && this.villagers.available <= 0) return;
+    if (delta < 0 && this.selectedBuilding.workers <= 0) return;
+    if (delta > 0 && this.selectedBuilding.workers >= this.villagers.total) return;
+    this.selectedBuilding.workers += delta;
+    this.villagers.available -= delta;
+  }
+
+  plantFarm() {
+    if (!this.selectedBuilding || this.selectedBuilding.type !== "farm") return;
+    if (!this.selectedBuilding.completed || this.selectedBuilding.farmStage !== 0) return;
+    if (this.inventory.items.seed <= 0) return;
+    this.inventory.items.seed -= 1;
+    this.selectedBuilding.farmStage = 1;
+    this.selectedBuilding.farmTimer = 0;
+  }
+
+  harvestFarm() {
+    if (!this.selectedBuilding || this.selectedBuilding.type !== "farm") return;
+    if (this.selectedBuilding.farmStage !== 2) return;
+    this.selectedBuilding.farmStage = 0;
+    this.inventory.add("food", 1);
+    this.inventory.add("seed", 1);
+  }
+
   matchCounts(counts, required) {
     const keys = Object.keys(counts);
     if (keys.length !== Object.keys(required).length) return false;
@@ -391,6 +758,16 @@ export default class GameEngine {
     if (this.inventory.items.campfire <= 0) return;
     if (this.entities.placeCampfire(this.player)) {
       this.inventory.items.campfire -= 1;
+    }
+  }
+
+  placeCampfireAt(x, y) {
+    if (this.inventory.items.campfire <= 0) return;
+    const tx = Math.floor(x / this.tileSize);
+    const ty = Math.floor(y / this.tileSize);
+    if (this.entities.placeCampfireAt(tx, ty, this.player)) {
+      this.inventory.items.campfire -= 1;
+      this.hud.showMessage("Fogueira colocada!");
     }
   }
 

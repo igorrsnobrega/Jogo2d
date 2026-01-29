@@ -166,7 +166,7 @@ export default class CraftingMenu {
     item.style.background = colorVar
       ? getComputedStyle(document.documentElement).getPropertyValue(colorVar)
       : fallbackColors[key] || "#9b9b9b";
-    if (["axe", "tent", "fishingRod", "campfire", "wood", "stone", "rawMeat", "cookedMeat", "fish"].includes(key)) {
+    if (["axe", "tent", "fishingRod", "campfire", "wood", "stone", "rawMeat", "cookedMeat", "fish", "food", "seed"].includes(key)) {
       const canvas = this.buildIconCanvas(key);
       item.appendChild(canvas);
     } else {
@@ -240,6 +240,16 @@ export default class CraftingMenu {
       ctx.fillRect(11, 8, 2, 2);
       ctx.fillStyle = "#d9f2ff";
       ctx.fillRect(6, 8, 1, 1);
+    } else if (key === "food") {
+      ctx.fillStyle = "#6fbf6a";
+      ctx.fillRect(5, 6, 6, 6);
+      ctx.fillStyle = "#3f8f3f";
+      ctx.fillRect(6, 5, 4, 2);
+    } else if (key === "seed") {
+      ctx.fillStyle = "#c9b15a";
+      ctx.fillRect(7, 6, 2, 4);
+      ctx.fillStyle = "#8b6a2b";
+      ctx.fillRect(6, 5, 1, 1);
     }
     return canvas;
   }
